@@ -24,6 +24,10 @@ class Migration:
     @lru_cache
     def get_tasks(self):
         return self.api.get_tasks()
+    
+    def clear_cache(self):
+        self.get_project_by_id_map.cache_clear()
+        self.get_tasks.cache_clear()
 
     def generate_file(self, filename='todo.txt', path='.'):
         fullpath = os.path.join(path, filename)
