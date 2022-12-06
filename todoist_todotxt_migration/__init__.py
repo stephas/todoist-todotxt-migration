@@ -1,1 +1,1 @@
-from .tools import translate_task
+from .tools import Migration
