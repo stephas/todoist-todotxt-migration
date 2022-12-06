@@ -6,4 +6,5 @@ setup(
     description='My first Python library',
     author='Me',
     license='MIT',
+    install_requires=['todoist-api-python']
 )
