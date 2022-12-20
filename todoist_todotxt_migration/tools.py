@@ -8,6 +8,12 @@ class ProjectRenameStrategy:
     @staticmethod
     def Uppercase(todoist_project):
         project_words = todoist_project.name.split()
+        uppercase_tail_words = [w[0].upper()+w[1:] for w in project_words[1:]]
+        return "".join([project_words[0]] + uppercase_tail_words)
+
+    @staticmethod
+    def UppercaseAll(todoist_project):
+        project_words = todoist_project.name.split()
         uppercase_words = [w[0].upper()+w[1:] for w in project_words]
         return "".join(uppercase_words)
 

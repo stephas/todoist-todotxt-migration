@@ -88,3 +88,10 @@ def test_task_with_spaces_in_project_name(migration):
 
     todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase)
     assert todotxt_task == "2022-12-20 A task +AProJec_-t-"
+
+    # first word case doesn't get touched
+    p = make_todoist_project("a house")
+    migration = make_new_test_case(migration, t, p)
+
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase)
+    assert todotxt_task == "2022-12-20 A task +aHouse"
