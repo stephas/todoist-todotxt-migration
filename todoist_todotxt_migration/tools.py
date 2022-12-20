@@ -3,6 +3,19 @@ from functools import lru_cache
 
 from todoist_api_python.api import TodoistAPI
 
+
+class ProjectRenameStrategy:
+    @staticmethod
+    def Uppercase(todoist_project):
+        project_words = todoist_project.name.split()
+        uppercase_words = [w[0].upper()+w[1:] for w in project_words]
+        return "".join(uppercase_words)
+
+    @staticmethod
+    def Underscore(todoist_project):
+        return todoist_project.name.replace(' ', '_')
+
+
 class Migration:
     @staticmethod
     def from_env_secret():
@@ -37,7 +50,7 @@ class Migration:
             for t in self.get_tasks():
                 fh.write(self.transform_task(t) + '\n')
 
-    def transform_task(self, t):
+    def transform_task(self, t, rename_strategy=ProjectRenameStrategy.Uppercase):
         project_by_id = self.get_project_by_id_map()
 
         # is_completed
@@ -48,7 +61,7 @@ class Migration:
         # creation date (needed if completion date is there) TBD
         created_at = t.created_at.split('T')[0] + " "
         # +projecttag TBD find children as option
-        project_transform = " +" + project_by_id[t.project_id].name.replace(' ', '_') if t.project_id else ""
+        project_transform = " +" + rename_strategy(project_by_id[t.project_id]) if t.project_id else ""
         # @context tag
         labels = " @" + " @".join(t.labels) if t.labels else ""
         # special key value due:2016-05-30

@@ -1,6 +1,6 @@
 import pytest
 
-from todoist_todotxt_migration.tools import Migration
+from todoist_todotxt_migration.tools import Migration, ProjectRenameStrategy
 from todoist_api_python.models import Task, Project
 
 # TBD: test creation date missing
@@ -32,6 +32,16 @@ def make_todoist_task(content, priority, is_completed=False):
         "url": None
     })
     
+
+def make_new_test_case(migration, todoist_task, todoist_project):
+    todoist_project.id = 1
+    todoist_task.project_id = todoist_project.id
+
+    migration.get_project_by_id_map = lambda: {todoist_project.id: todoist_project}
+
+    return migration
+
+
 @pytest.fixture
 def migration():
     m = Migration(token=None)
@@ -48,14 +58,33 @@ def test_task_without_project(migration):
 
 def test_task_with_project(migration):
     t = make_todoist_task("A task", priority=1)
-
     p = make_todoist_project("Project")
-    t.project_id = p.id
-    migration.get_project_by_id_map = lambda: {p.id: p}
+    migration = make_new_test_case(migration, t, p)
 
     todotxt_task = migration.transform_task(t)
 
     assert todotxt_task == "2022-12-20 A task +Project"
 
+
 def test_task_with_spaces_in_project_name(migration):
-    pass
+    """ Todoist allows spaces, but todo.txt doesn't, handle it with a strategy """
+    t = make_todoist_task("A task", priority=1)
+    p = make_todoist_project("A project")
+    migration = make_new_test_case(migration, t, p)
+
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Underscore)
+    assert todotxt_task == "2022-12-20 A task +A_project"
+
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase)
+    assert todotxt_task == "2022-12-20 A task +AProject"
+
+
+    # funky name
+    p = make_todoist_project("A proJec_-t -")
+    migration = make_new_test_case(migration, t, p)
+
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Underscore)
+    assert todotxt_task == "2022-12-20 A task +A_proJec_-t_-"
+
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase)
+    assert todotxt_task == "2022-12-20 A task +AProJec_-t-"
