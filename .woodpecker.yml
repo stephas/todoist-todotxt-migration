@@ -1,0 +1,9 @@
+platform: linux/amd64
+
+pipeline:
+  test:
+    image: python:3
+    group: test
+    commands:
+      - pip install --no-cache-dir -r requirements.txt
+      - python -m pytest
