@@ -7,3 +7,5 @@ pipeline:
     commands:
       - pip install --no-cache-dir -r requirements.txt
       - python -m pytest
+    secrets:
+      - todoist_token
