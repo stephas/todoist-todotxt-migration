@@ -5,10 +5,11 @@ from todoist_api_python.models import Task, Project
 
 # TBD: test creation date missing
 
-def make_todoist_project(name):
+def make_todoist_project(name, id=None, parent_id=None):
     return Project.from_dict({
         "color": None,
-        "id": None,
+        "id": id,
+        "parent_id": parent_id,
         "comment_count": None,
         "is_favorite": None,
         "is_shared": None,
@@ -17,7 +18,7 @@ def make_todoist_project(name):
         "view_style": None,
     })
 
-def make_todoist_task(content, priority, is_completed=False):
+def make_todoist_task(content, priority, is_completed=False, project_id=None):
     return Task.from_dict({
         "comment_count": None,
         "is_completed": is_completed,
@@ -27,7 +28,7 @@ def make_todoist_task(content, priority, is_completed=False):
         "description": None,
         "id": None,
         "priority": priority,
-        "project_id": None,
+        "project_id": project_id,
         "section_id": None,
         "url": None
     })
@@ -40,6 +41,13 @@ def make_new_test_case(migration, todoist_task, todoist_project):
     migration.get_project_by_id_map = lambda: {todoist_project.id: todoist_project}
 
     return migration
+
+def make_project_map(migration, projects):
+    m = {}
+    for p in projects:
+        m[p.id] = p
+    migration.get_project_by_id_map = lambda: m
+    return m
 
 
 @pytest.fixture
@@ -95,3 +103,35 @@ def test_task_with_spaces_in_project_name(migration):
 
     todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase)
     assert todotxt_task == "2022-12-20 A task +aHouse"
+
+
+def test_project_with_parents(migration):
+    p = make_todoist_project("A project", id=1, parent_id=2)
+    pp = make_todoist_project("A parent project", id=2)
+
+    assert 3 not in make_project_map(migration, [p, pp])
+    assert 2 in migration.get_project_by_id_map()
+
+    t = make_todoist_task("A task", priority=1, project_id=1)
+
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase)
+    assert todotxt_task == "2022-12-20 A task +AProject +AParentProject"
+
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase, project_strategy='Folder')
+    assert todotxt_task == "2022-12-20 A task +AParentProject/AProject +AParentProject"
+
+    #todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase, project_strategy='AncestorContext')
+    #assert todotxt_task == "2022-12-20 A task @AProject +AParentProject"
+
+
+    ppp = make_todoist_project("A grandparent project", id=3)
+    pp.parent_id = 3
+    assert 3 in make_project_map(migration, [p, pp, ppp])
+
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase, project_strategy='Names')
+    assert todotxt_task == "2022-12-20 A task +AProject +AParentProject +AGrandparentProject"
+    todotxt_task = migration.transform_task(t, rename_strategy=ProjectRenameStrategy.Uppercase, project_strategy='Folder')
+    assert todotxt_task == "2022-12-20 A task +AGrandparentProject/AParentProject/AProject +AGrandparentProject/AParentProject +AGrandparentProject"
+    #assert todotxt_task == "2022-12-20 A task @AProject +AGrandparentProject/AParentProject +AGrandparentProject"
+
+    # should the context be the grandparents and parents? or should it be the project iself? should it be a choice

@@ -56,9 +56,48 @@ class Migration:
             for t in self.get_tasks():
                 fh.write(self.transform_task(t) + '\n')
 
-    def transform_task(self, t, rename_strategy=ProjectRenameStrategy.Uppercase):
-        project_by_id = self.get_project_by_id_map()
+    def projects_with_ancestors(self, project_id):
+        project = self.get_project_by_id_map()[project_id]
+        projects = [project]
 
+        if project.parent_id:
+            projects += self.projects_with_ancestors(project.parent_id)
+
+        return projects
+
+
+    def todotxt_project_for_todoist_task(self, t, rename_strategy, parent_strategy):
+        todotxt_project = ""
+
+        if t.project_id:
+            projects = self.projects_with_ancestors(t.project_id)
+
+            def Folder(projects):
+                project_folders = []
+                for i, p in enumerate(projects):
+                    projects_for_path = projects[i:]
+                    project_folder = "/".join(reversed([rename_strategy(pp) for pp in projects_for_path]))
+                    project_folders.append(project_folder)
+
+                transform = " +".join([p for p in project_folders])
+                return " +" + transform
+
+            def Names(projects):
+                transform = " +".join([rename_strategy(p) for p in projects])
+                return " +" + transform
+
+            if parent_strategy == 'Folder':
+                todotxt_project = Folder(projects)
+            elif parent_strategy == 'tbd':
+                todotxt_project = Names(projects)
+            else:
+                todotxt_project = Names(projects)
+
+
+        return todotxt_project
+
+
+    def transform_task(self, t, rename_strategy=ProjectRenameStrategy.Uppercase, project_strategy='Names'):
         # is_completed
         is_completed = 'x ' if t.is_completed else ""
         # priority
@@ -67,7 +106,7 @@ class Migration:
         # creation date (needed if completion date is there) TBD
         created_at = t.created_at.split('T')[0] + " "
         # +projecttag TBD find children as option
-        project_transform = " +" + rename_strategy(project_by_id[t.project_id]) if t.project_id else ""
+        project_transform = self.todotxt_project_for_todoist_task(t, rename_strategy, project_strategy)
         # @context tag
         labels = " @" + " @".join(t.labels) if t.labels else ""
         # special key value due:2016-05-30
