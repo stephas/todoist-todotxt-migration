@@ -40,12 +40,23 @@ class Migration:
             project_by_id[p.id] = p
         return project_by_id
 
+    # TBD: get project with sections by id dict
+
+    @lru_cache
+    def get_section_by_id_map(self):
+        sections = self.api.get_sections()
+        section_by_id = {}
+        for p in sections:
+            section_by_id[p.id] = p
+        return section_by_id
+
     @lru_cache
     def get_tasks(self):
         return self.api.get_tasks()
     
     def clear_cache(self):
         self.get_project_by_id_map.cache_clear()
+        self.get_section_by_id_map.cache_clear()
         self.get_tasks.cache_clear()
 
     def generate_file(self, filename='todo.txt', path='.'):
@@ -97,6 +108,16 @@ class Migration:
         return todotxt_project
 
 
+    def todotxt_context_for_todoist_section(self, t, rename_strategy):
+        todotxt_section = ""
+
+        if t.section_id:
+            section = self.get_section_by_id_map()[t.section_id]
+            todotxt_section = " @" + rename_strategy(section)
+
+        return todotxt_section
+
+
     def transform_task(self, t, rename_strategy=ProjectRenameStrategy.Uppercase, project_strategy='Names'):
         # is_completed
         is_completed = 'x ' if t.is_completed else ""
@@ -107,13 +128,24 @@ class Migration:
         created_at = t.created_at.split('T')[0] + " "
         # +projecttag TBD find children as option
         project_transform = self.todotxt_project_for_todoist_task(t, rename_strategy, project_strategy)
+        contexts = self.todotxt_context_for_todoist_section(t, rename_strategy)
         # @context tag
         labels = " @" + " @".join(t.labels) if t.labels else ""
         # special key value due:2016-05-30
         due = " due:" + t.due.date if t.due else ""
         rec = " rec:1d" if t.due and t.due.string == "every day" else ""
+
         if t.is_completed:
             print(t)
             assert False
+            # TBD
             print(True)
-        return is_completed + priority + created_at + t.content + project_transform + labels + due + rec
+
+        return is_completed + \
+                priority + \
+                created_at + \
+                t.content + \
+                project_transform + \
+                contexts + labels + \
+                due + \
+                rec
