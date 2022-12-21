@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 setup(
     name='todoist-todotxt-migration',
     packages=find_packages(include=['todoist_todotxt_migration']),
-    version='0.2.0',
+    version='0.2.1',
     description='My first Python library',
     author='Me',
     license='MIT',
