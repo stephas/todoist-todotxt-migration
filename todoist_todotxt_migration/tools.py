@@ -1,4 +1,6 @@
 import os
+import re
+
 from functools import lru_cache
 
 from todoist_api_python.api import TodoistAPI
@@ -118,6 +120,22 @@ class Migration:
         return todotxt_section
 
 
+    def todotxt_due_for_todoist_due(self, t):
+        todotxt_due = ""
+
+        if t.due:
+            todotxt_due = " due:" + t.due.date
+
+            if t.due.is_recurring:
+                due_string = t.due.string.lower().strip()
+
+                count, timespan = re.match(r'every\s+(\d+)\s+([dwmy])', due_string).groups()
+
+                todotxt_due += " rec:" + count + timespan
+
+        return todotxt_due
+
+
     def transform_task(self, t, rename_strategy=ProjectRenameStrategy.Uppercase, project_strategy='Names'):
         # is_completed
         is_completed = 'x ' if t.is_completed else ""
@@ -132,7 +150,7 @@ class Migration:
         # @context tag
         labels = " @" + " @".join(t.labels) if t.labels else ""
         # special key value due:2016-05-30
-        due = " due:" + t.due.date if t.due else ""
+        due = self.todotxt_due_for_todoist_due(t)
         rec = " rec:1d" if t.due and t.due.string == "every day" else ""
 
         if t.is_completed:

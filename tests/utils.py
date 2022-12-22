@@ -1,7 +1,7 @@
 import pytest
 
 from todoist_todotxt_migration.tools import Migration, ProjectRenameStrategy
-from todoist_api_python.models import Task, Project, Section
+from todoist_api_python.models import Task, Project, Section, Due
 
 # TBD: test creation date missing
 
@@ -26,7 +26,16 @@ def make_todoist_project(name, id=None, parent_id=None):
         "view_style": None,
     })
 
-def make_todoist_task(content, priority, is_completed=False, project_id=None, labels=None, section_id=None):
+def make_todoist_due(date, string=""):
+    return {
+        "date": date,
+        "is_recurring": bool(string),
+        "string": string,
+        "datetime": None,
+        "timezone": None
+    }
+
+def make_todoist_task(content, priority=1, is_completed=False, project_id=None, labels=None, section_id=None, due=None):
     return Task.from_dict({
         "comment_count": None,
         "is_completed": is_completed,
@@ -39,7 +48,8 @@ def make_todoist_task(content, priority, is_completed=False, project_id=None, la
         "project_id": project_id,
         "section_id": section_id,
         "url": None,
-        "labels": labels
+        "labels": labels,
+        "due": due
     })
     
 
