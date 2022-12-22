@@ -1,6 +1,7 @@
 import os
 import re
 
+from datetime import date, timedelta
 from functools import lru_cache
 
 from todoist_api_python.api import TodoistAPI
@@ -127,30 +128,83 @@ class Migration:
             todotxt_due = " due:" + t.due.date
 
             if t.due.is_recurring:
+                due_date = date.fromisoformat(t.due.date)
+
                 due_string = t.due.string.lower().strip()
 
                 rec_value = None
 
+                print(due_string)
                 lys = re.match(r'([dwmy])(?:ai|eek|onth|ear)ly', due_string)
-                every = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string)
-                if lys:
-                    rec_value = lys.group(1)
-                elif every:
-                    count, timespan = every.groups()
+                every = re.match(r'every\s+(day|week|month|year)', due_string)
+                every_nth = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string)
+
+                # shortest string to uniquely identify  all months and weekdays:
+                #'th,tu,o,d,ap,au,mar,may,mo,w,sa,se,su,fe,fr,no,ja,jun,jul'
+                weekday_or_month = re.match(r'every\s+(other\s+)?(th|tu|o|d|ap|au|mar|may|mo|w|sa|se|su|fe|fr|no|ja|jun|jul)', due_string)
+                explicit_day_of_month_or_year = re.match(r'every\s+(other\s+)?(\d+)(?:st|nd|rd|th)', due_string)
+
+                if lys or every:
+                    rec_value = (lys or every).group(1)[0]
+                elif every_nth:
+                    count, timespan = every_nth.groups()
 
                     if count == "other":
                         count = "2"
 
                     rec_value = count + timespan
+                elif weekday_or_month:
+                    double_time = weekday_or_month.group(1)
+                    found_name = weekday_or_month.group(2)
+
+                    # if the due date matches the day of the week, add a strict +7d
+                    due_date_weekday = due_date.strftime('%A')
+
+                    if found_name == due_date_weekday.lower()[:len(found_name)]:
+                        rec_value = "+2w" if double_time else '+1w'
+                    else:
+                        #convert weekday to int
+                        weekdays = "mo,tu,w,th,fr,sa,su".split(',')
+                        print(list(enumerate(weekdays)))
+                        weekday_as_number_from_every_string = [n for n,letters in enumerate(weekdays) if found_name.startswith(letters)][0]
+                        print(weekday_as_number_from_every_string)
+                        weekday_from_due = due_date.weekday()
+                        print(weekday_from_due)
+                        day_difference = (weekday_from_due - weekday_as_number_from_every_string)
+                        print(day_difference)
+                        day_difference = (day_difference + 7) % 7
+                        print(day_difference)
+                        new_due = due_date - timedelta(days=day_difference)
+                        print(new_due)
+
+
+                        todotxt_due = f" due:{new_due}"
+                        rec_value = "+1w"
+                        # moving it backwards to make it overdue but keep the strict weekly occurence
+                        if double_time:
+                            raise NotImplementedError(t.due.date, due_string, f"due {due_date_weekday} is not the same weekday as due string, strict +14d puts us elsewhere")
+
+                elif explicit_day_of_month_or_year:
+                    double_time = explicit_day_of_month_or_year.group(1)
+                    found_explicit_day = int(explicit_day_of_month_or_year.group(2))
+
+                    if found_explicit_day == due_date.day:
+                        rec_value = "+2m" if double_time else '+1m'
+                    else:
+                        rec_value = "tbd"
+                        raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day)
+
+                    # else raise a not implemented error
                 else:
+                    rec_value = "tb2d"
                     raise NotImplementedError(t.due.date, due_string)
-                    'th,tu,o,d,ap,au,mar,may,mo,w,sa,se,su,fe,fr,no,ja,jun,jul'
-                    count, timespan = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string).groups()
 
-                    if count == "other":
-                        count = "2"
+                    #count, timespan = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string).groups()
 
-                    rec_value = count + timespan
+                    #if count == "other":
+                    #    count = "2"
+
+                    #rec_value = count + timespan
 
                 todotxt_due += f" rec:{rec_value}"
 
@@ -172,7 +226,6 @@ class Migration:
         labels = " @" + " @".join(t.labels) if t.labels else ""
         # special key value due:2016-05-30
         due = self.todotxt_due_for_todoist_due(t)
-        rec = " rec:1d" if t.due and t.due.string == "every day" else ""
 
         if t.is_completed:
             print(t)
@@ -186,5 +239,4 @@ class Migration:
                 t.content + \
                 project_transform + \
                 contexts + labels + \
-                due + \
-                rec
+                due
