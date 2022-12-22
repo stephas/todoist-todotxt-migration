@@ -129,9 +129,30 @@ class Migration:
             if t.due.is_recurring:
                 due_string = t.due.string.lower().strip()
 
-                count, timespan = re.match(r'every\s+(\d+)\s+([dwmy])', due_string).groups()
+                rec_value = None
 
-                todotxt_due += " rec:" + count + timespan
+                lys = re.match(r'([dwmy])(?:ai|eek|onth|ear)ly', due_string)
+                every = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string)
+                if lys:
+                    rec_value = lys.group(1)
+                elif every:
+                    count, timespan = every.groups()
+
+                    if count == "other":
+                        count = "2"
+
+                    rec_value = count + timespan
+                else:
+                    raise NotImplementedError(t.due.date, due_string)
+                    'th,tu,o,d,ap,au,mar,may,mo,w,sa,se,su,fe,fr,no,ja,jun,jul'
+                    count, timespan = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string).groups()
+
+                    if count == "other":
+                        count = "2"
+
+                    rec_value = count + timespan
+
+                todotxt_due += f" rec:{rec_value}"
 
         return todotxt_due
 

@@ -36,3 +36,17 @@ def test_every_x_days_weeks_months_years(migration, due_task):
     assert due_task("Every 1 Week")   == "2022-12-20 A task due:2022-12-22 rec:1w"
     assert due_task("Every 5 months") == "2022-12-20 A task due:2022-12-22 rec:5m"
     assert due_task("Every 7 years")  == "2022-12-20 A task due:2022-12-22 rec:7y"
+
+# daily, weekly, monthly yearly
+# every (other) day, week, month, year
+def test_timeperiod_lys(migration, due_task):
+    assert due_task("daily")   == "2022-12-20 A task due:2022-12-22 rec:d"
+    assert due_task("weekly")  == "2022-12-20 A task due:2022-12-22 rec:w"
+    assert due_task("monthly") == "2022-12-20 A task due:2022-12-22 rec:m"
+    assert due_task("yearly")  == "2022-12-20 A task due:2022-12-22 rec:y"
+    with pytest.raises(NotImplementedError):
+        assert due_task("hourly")
+
+def test_every_other(migration, due_task):
+    assert due_task("every other day")   == "2022-12-20 A task due:2022-12-22 rec:2d"
+    assert due_task("every other year")   == "2022-12-20 A task due:2022-12-22 rec:2y"
