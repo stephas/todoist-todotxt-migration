@@ -35,12 +35,12 @@ def make_todoist_due(date, string=""):
         "timezone": None
     }
 
-def make_todoist_task(content, priority=1, is_completed=False, project_id=None, labels=None, section_id=None, due=None):
+def make_todoist_task(content, priority=1, is_completed=False, project_id=None, labels=None, section_id=None, due=None, created_at="2022-12-20"):
     return Task.from_dict({
         "comment_count": None,
         "is_completed": is_completed,
         "content": content,
-        "created_at": "2022-12-20T",
+        "created_at": f"{created_at}T",
         "creator_id": None,
         "description": None,
         "id": None,

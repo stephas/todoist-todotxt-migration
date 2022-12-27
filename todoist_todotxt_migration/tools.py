@@ -128,6 +128,7 @@ class Migration:
             todotxt_due = " due:" + t.due.date
 
             if t.due.is_recurring:
+                create_date = date.fromisoformat(t.created_at.split('T')[0])
                 due_date = date.fromisoformat(t.due.date)
 
                 due_string = t.due.string.lower().strip()
@@ -135,17 +136,23 @@ class Migration:
                 rec_value = None
 
                 print(due_string)
-                lys = re.match(r'([dwmy])(?:ai|eek|onth|ear)ly', due_string)
+                lys = re.match(r'(bi)?([dwmy])(?:ai|eek|onth|ear)ly', due_string)
                 every = re.match(r'every\s+(day|week|month|year)', due_string)
                 every_nth = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string)
 
                 # shortest string to uniquely identify  all months and weekdays:
                 #'th,tu,o,d,ap,au,mar,may,mo,w,sa,se,su,fe,fr,no,ja,jun,jul'
-                weekday_or_month = re.match(r'every\s+(other\s+)?(th|tu|o|d|ap|au|mar|may|mo|w|sa|se|su|fe|fr|no|ja|jun|jul)', due_string)
-                explicit_day_of_month_or_year = re.match(r'every\s+(other\s+)?(\d+)(?:st|nd|rd|th)', due_string)
+                #weekday_or_month = re.match(r'every\s+(other\s+)?(th|tu|o|d|ap|au|mar|may|mo|w|sa|se|su|fe|fr|no|ja|jun|jul)', due_string)
+                weekday = re.match(r'every\s+(other\s+)?(th|tu|mo|w|sa|su|fr)', due_string)
+                explicit_day_of_month_or_year = re.match(r'every\s+(other\s+)?(\d+)?(?:st|nd|rd|th)?\s*(o|d|ap|au|mar|may|se|fe|no|ja|jun|jul)?(?:\w*\s+(\d+)?(?:st|nd|rd|th)?)?', due_string)
+                if explicit_day_of_month_or_year:
+                    print(explicit_day_of_month_or_year.groups())
 
-                if lys or every:
-                    rec_value = (lys or every).group(1)[0]
+                if lys:
+                    double, time_span = lys.groups()
+                    rec_value = ('2' if double else '') + time_span
+                elif every:
+                    rec_value = every.group(1)[0]
                 elif every_nth:
                     count, timespan = every_nth.groups()
 
@@ -153,9 +160,9 @@ class Migration:
                         count = "2"
 
                     rec_value = count + timespan
-                elif weekday_or_month:
-                    double_time = weekday_or_month.group(1)
-                    found_name = weekday_or_month.group(2)
+                elif weekday:
+                    double_time = weekday.group(1)
+                    found_name = weekday.group(2)
 
                     # if the due date matches the day of the week, add a strict +7d
                     due_date_weekday = due_date.strftime('%A')
@@ -185,14 +192,27 @@ class Migration:
                             raise NotImplementedError(t.due.date, due_string, f"due {due_date_weekday} is not the same weekday as due string, strict +14d puts us elsewhere")
 
                 elif explicit_day_of_month_or_year:
-                    double_time = explicit_day_of_month_or_year.group(1)
-                    found_explicit_day = int(explicit_day_of_month_or_year.group(2))
+                    double_time, prefix_day, month_token, postfix_day = explicit_day_of_month_or_year.groups()
+                    print(month_token)
+                    found_explicit_day = int(prefix_day or postfix_day or 0) or False
 
-                    if found_explicit_day == due_date.day:
-                        rec_value = "+2m" if double_time else '+1m'
+                    time_span = "y" if month_token else "m"
+                    double_span = "+2" if double_time else '+1'
+
+                    if found_explicit_day:
+                        if found_explicit_day == due_date.day:
+                            rec_value = double_span + time_span
+                        else:
+                            rec_value = "tbd"
+                            raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, "due date date doesn't align")
                     else:
-                        rec_value = "tbd"
-                        raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day)
+                        rec_value = double_span + time_span
+
+#                    if due_date.month != create_date.month:
+#                        raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, t)
+#                    if found_explicit_day:
+#                        if due_date.month != create_date.month:
+#                            raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, t)
 
                     # else raise a not implemented error
                 else:
