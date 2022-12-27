@@ -15,7 +15,6 @@ def filename():
     os.remove(name)
 
 
-@pytest.mark.skip('integ_skip')
 def test_integ(filename):
     migration = Migration.from_env_secret()
     migration.generate_file(filename)

@@ -131,6 +131,9 @@ class Migration:
                 create_date = date.fromisoformat(t.created_at.split('T')[0])
                 due_date = date.fromisoformat(t.due.date)
 
+                if due_date < create_date:
+                    raise NotImplementedError("due date before create date is not understood")
+
                 due_string = t.due.string.lower().strip()
 
                 rec_value = None
@@ -164,36 +167,26 @@ class Migration:
                     double_time = weekday.group(1)
                     found_name = weekday.group(2)
 
-                    # if the due date matches the day of the week, add a strict +7d
-                    due_date_weekday = due_date.strftime('%A')
+                    weekdays = "mo,tu,w,th,fr,sa,su".split(',')
+                    weekday_as_number_from_every_string = [n for n,letters in enumerate(weekdays) if found_name.startswith(letters)][0]
+                    weekday_from_due = due_date.weekday()
+                    day_difference = (weekday_from_due - weekday_as_number_from_every_string)
+                    day_difference = (day_difference + 7) % 7
 
-                    if found_name == due_date_weekday.lower()[:len(found_name)]:
-                        rec_value = "+2w" if double_time else '+1w'
-                    else:
-                        #convert weekday to int
-                        weekdays = "mo,tu,w,th,fr,sa,su".split(',')
-                        print(list(enumerate(weekdays)))
-                        weekday_as_number_from_every_string = [n for n,letters in enumerate(weekdays) if found_name.startswith(letters)][0]
-                        print(weekday_as_number_from_every_string)
-                        weekday_from_due = due_date.weekday()
-                        print(weekday_from_due)
-                        day_difference = (weekday_from_due - weekday_as_number_from_every_string)
-                        print(day_difference)
-                        day_difference = (day_difference + 7) % 7
-                        print(day_difference)
-                        new_due = due_date - timedelta(days=day_difference)
-                        print(new_due)
+                    new_due = due_date - timedelta(days=day_difference)
 
 
-                        todotxt_due = f" due:{new_due}"
-                        rec_value = "+1w"
-                        # moving it backwards to make it overdue but keep the strict weekly occurence
-                        if double_time:
-                            raise NotImplementedError(t.due.date, due_string, f"due {due_date_weekday} is not the same weekday as due string, strict +14d puts us elsewhere")
+                    # moving it backwards to make it overdue but keep the strict weekly occurence
+                    if double_time:
+                        date_diff = due_date - create_date
+                        if (date_diff.days % 14) >= 7:
+                            new_due = new_due - timedelta(days=7)
+
+                    todotxt_due = f" due:{new_due}"
+                    rec_value = "+2w" if double_time else '+1w'
 
                 elif explicit_day_of_month_or_year:
                     double_time, prefix_day, month_token, postfix_day = explicit_day_of_month_or_year.groups()
-                    print(month_token)
                     found_explicit_day = int(prefix_day or postfix_day or 0) or False
 
                     time_span = "y" if month_token else "m"
@@ -204,27 +197,30 @@ class Migration:
                             rec_value = double_span + time_span
                         else:
                             rec_value = "tbd"
-                            raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, "due date date doesn't align")
+                            raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, "due date day doesn't align")
                     else:
+                        months = "ja|fe|mar|ap|may|jun|jul|au|se|o|no|d".split('|')
+                        month_as_number_from_every_string = [n+1 for n,letters in enumerate(months) if month_token.startswith(letters)][0]
+                        if month_as_number_from_every_string != due_date.month:
+                            raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, "due date month doesn't align")
+
                         rec_value = double_span + time_span
 
-#                    if due_date.month != create_date.month:
-#                        raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, t)
-#                    if found_explicit_day:
-#                        if due_date.month != create_date.month:
-#                            raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, t)
 
-                    # else raise a not implemented error
+                    new_due = due_date
+                    # moving it backwards to make it overdue but keep the strict yearly occurence
+                    if double_time:
+                        year_diff = due_date.year - create_date.year
+                        if (year_diff % 2 >= 1):
+                            print("shift year")
+                            #new_due = new_due - timedelta(days=365)
+                            new_due = date(new_due.year - 1, new_due.month, new_due.day)
+
+                    todotxt_due = f" due:{new_due}"
+
                 else:
-                    rec_value = "tb2d"
+                    rec_value = "err"
                     raise NotImplementedError(t.due.date, due_string)
-
-                    #count, timespan = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string).groups()
-
-                    #if count == "other":
-                    #    count = "2"
-
-                    #rec_value = count + timespan
 
                 todotxt_due += f" rec:{rec_value}"
 
