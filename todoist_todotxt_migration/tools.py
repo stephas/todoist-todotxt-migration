@@ -154,7 +154,6 @@ class Migration:
 
                 rec_value = None
 
-                print(due_string)
                 lys = re.match(r'(bi)?([dwmy])(?:ai|eek|onth|ear)ly', due_string)
                 every = re.match(r'every\s+(day|week|month|year)', due_string)
                 every_nth = re.match(r'every\s+(other|\d+)\s+([dwmy])', due_string)
@@ -164,8 +163,6 @@ class Migration:
                 #weekday_or_month = re.match(r'every\s+(other\s+)?(th|tu|o|d|ap|au|mar|may|mo|w|sa|se|su|fe|fr|no|ja|jun|jul)', due_string)
                 weekday = re.match(r'every\s+(other\s+)?(th|tu|mo|w|sa|su|fr)', due_string)
                 explicit_day_of_month_or_year = re.match(r'every\s+(other\s+)?(\d+)?(?:st|nd|rd|th)?\s*(o|d|ap|au|mar|may|se|fe|no|ja|jun|jul)?(?:\w*\s+(\d+)?(?:st|nd|rd|th)?)?', due_string)
-                if explicit_day_of_month_or_year:
-                    print(explicit_day_of_month_or_year.groups())
 
                 if lys:
                     double, time_span = lys.groups()
@@ -228,7 +225,6 @@ class Migration:
                     if double_time:
                         year_diff = due_date.year - create_date.year
                         if (year_diff % 2 >= 1):
-                            print("shift year")
                             #new_due = new_due - timedelta(days=365)
                             new_due = date(new_due.year - 1, new_due.month, new_due.day)
 
