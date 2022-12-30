@@ -78,6 +78,6 @@ def make_section_map(migration, sections):
 
 @pytest.fixture
 def migration():
-    m = Migration(token=None)
+    m = Migration(token=None, keep_todoist_id=False)
     m.get_project_by_id_map = lambda: {}
     return m

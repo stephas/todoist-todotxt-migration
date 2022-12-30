@@ -27,13 +27,14 @@ class ProjectRenameStrategy:
 
 class Migration:
     @staticmethod
-    def from_env_secret():
+    def from_env_secret(keep_todoist_id=False):
         token = os.getenv('TODOIST_TOKEN')
         assert token
-        return Migration(token)
+        return Migration(token, keep_todoist_id=keep_todoist_id)
 
-    def __init__(self, token):
+    def __init__(self, token, keep_todoist_id):
         self.api = TodoistAPI(token)
+        self.config_keep_todoist_id = keep_todoist_id
 
     @lru_cache
     def get_project_by_id_map(self):
@@ -243,6 +244,8 @@ class Migration:
         # special key value due:2016-05-30
         due = self.todotxt_due_for_todoist_due(t)
 
+        todoist_id = f" todoist:{t.id}" if self.config_keep_todoist_id else ""
+
         if t.is_completed:
             print(t)
             assert False
@@ -255,4 +258,5 @@ class Migration:
                 t.content + \
                 project_transform + \
                 contexts + labels + \
-                due
+                due + \
+                todoist_id
