@@ -71,6 +71,21 @@ class Migration:
             for t in self.get_tasks():
                 fh.write(self.transform_task(t) + '\n')
 
+    def complete_todoist_tasks_from_todotxt(self, filename='todo.txt', path='.'):
+        fullpath = os.path.join(path, filename)
+        # read from todo.txt
+        tasks = []
+        with open(fullpath, 'r') as fh:
+            tasks = [t.strip() for t in fh.readlines()]
+
+        done_tasks = [t for t in tasks if t.startswith("x ")]
+        for t in done_tasks:
+            todoist_id_search = re.search(r'todoist:(\d+)', t)
+            if todoist_id_search:
+                todoist_id = todoist_id_search.group(1)
+                self.api.close_task(task_id=todoist_id)
+                print(f"completed {todoist_id}")
+
     def projects_with_ancestors(self, project_id):
         project = self.get_project_by_id_map()[project_id]
         projects = [project]
