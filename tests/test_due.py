@@ -86,8 +86,7 @@ def test_weekday(migration, due_task):
 def test_every_nth_of_month(migration, due_task):
     assert due_task("every 20th", "2022-12-20")   == "2022-12-20 A task due:2022-12-20 rec:+1m"
     # due date doesn't align with monthly recurrence intervals after create date
-    with pytest.raises(NotImplementedError):
-        assert due_task("every 21st")   == "2022-12-20 A task due:2022-12-21 rec:m"
+    assert due_task("every 21st")   == "2022-12-20 A task due:2022-12-21 rec:+1m"
 
 def test_day_month_of_year(migration, due_task):
     assert due_task("every april 18", due_date="2022-04-18", created_at="2022-04-18")   == "2022-04-18 A task due:2022-04-18 rec:+1y"
@@ -122,5 +121,8 @@ def test_day_month_of_year(migration, due_task):
 
     with pytest.raises(NotImplementedError):
         due_task("every april", "2022-12-20")
-    with pytest.raises(NotImplementedError):
-        due_task("every april 18th", "2022-12-20")
+    assert due_task("every april 18th", due_date="2022-12-20") == "2022-12-20 A task due:2022-04-18 rec:+1y"
+
+
+def test_align_bug(migration, due_task):
+    assert due_task("every 1st feb", due_date="2023-03-15", created_at="2021-12-11")   == "2021-12-11 A task due:2023-02-01 rec:+1y"

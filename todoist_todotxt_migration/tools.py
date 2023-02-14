@@ -7,6 +7,11 @@ from functools import lru_cache
 from todoist_api_python.api import TodoistAPI
 
 
+
+def string_to_month(month_token):
+    months = "ja|fe|mar|ap|may|jun|jul|au|se|o|no|d".split('|')
+    return [n+1 for n,letters in enumerate(months) if month_token.startswith(letters)][0]
+
 class ProjectRenameStrategy:
     @staticmethod
     def Uppercase(todoist_project):
@@ -205,22 +210,43 @@ class Migration:
                     time_span = "y" if month_token else "m"
                     double_span = "+2" if double_time else '+1'
 
+                    rec_value = double_span + time_span
+
+                    new_due = due_date
+
                     if found_explicit_day:
                         if found_explicit_day == due_date.day:
-                            rec_value = double_span + time_span
+                            pass
                         else:
-                            rec_value = "tbd"
-                            raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, "due date day doesn't align")
+                            # TBD
+                            # recurring task was punted, there might be a threshold solution
+                            # however from reading about the t: attribute it would be kept and then the tasks always be late for the future tasks.
+
+                            # so let's backtrack from the due date till the last recurrance
+                            # start at create date, replace digits,
+                            # save temp date, add interval
+                            # if new date is greater than due, stop
+                            # use new date as due date
+                            month_as_number_from_every_string = string_to_month(month_token) if month_token else None
+                            candidate_date = date(day=found_explicit_day,
+                                                  month=month_as_number_from_every_string or create_date.month,
+                                                  year=create_date.year)
+                            def incr_candidate_date(candidate_date):
+                                return date(
+                                    day=candidate_date.day,
+                                    month=candidate_date.month,
+                                    year = candidate_date.year + int(double_span[1]))
+                            while (incr_candidate_date(candidate_date) < due_date):
+                                # since it's an explicit day, it's a year or two)
+                                candidate_date = incr_candidate_date(candidate_date)
+
+                            new_due = candidate_date
                     else:
-                        months = "ja|fe|mar|ap|may|jun|jul|au|se|o|no|d".split('|')
-                        month_as_number_from_every_string = [n+1 for n,letters in enumerate(months) if month_token.startswith(letters)][0]
+                        month_as_number_from_every_string = string_to_month(month_token)
                         if month_as_number_from_every_string != due_date.month:
                             raise NotImplementedError(t.due.date, due_string, found_explicit_day, due_date.day, "due date month doesn't align")
 
-                        rec_value = double_span + time_span
 
-
-                    new_due = due_date
                     # moving it backwards to make it overdue but keep the strict yearly occurence
                     if double_time:
                         year_diff = due_date.year - create_date.year
