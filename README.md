@@ -3,7 +3,14 @@
 ```
 export TODOIST_TOKEN="your api token here from todoist: open profile -> integrations -> developer -> API token"
 ```
-Usage:
+
+##Install
+
+```
+pip install git+https://github.com/stephas/todoist-todotxt-migration#egg=todoist-todotxt-migration==0.3.3
+```
+
+##Usage
 
 ```python
 def migrate():
