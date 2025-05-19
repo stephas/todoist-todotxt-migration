@@ -7,7 +7,7 @@ export TODOIST_TOKEN="your api token here from todoist: open profile -> integrat
 ##Install
 
 ```
-pip install git+https://github.com/stephas/todoist-todotxt-migration#egg=todoist-todotxt-migration==0.3.3
+pip install git+https://github.com/stephas/todoist-todotxt-migration#egg=todoist-todotxt-migration==0.3.4
 ```
 
 ##Usage
