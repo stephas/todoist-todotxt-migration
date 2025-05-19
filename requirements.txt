@@ -1,2 +1,2 @@
-todoist-api-python
+todoist-api-python==2.1.7
 pytest

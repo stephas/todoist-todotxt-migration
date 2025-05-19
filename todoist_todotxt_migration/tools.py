@@ -88,7 +88,8 @@ class Migration:
             todoist_id_search = re.search(r'todoist:(\d+)', t)
             if todoist_id_search:
                 todoist_id = todoist_id_search.group(1)
-                self.api.complete_task(task_id=todoist_id)
+                # new, but throws httperror .... self.api.complete_task(task_id=todoist_id)
+                self.api.close_task(task_id=todoist_id)
                 print(f"completed {todoist_id}")
 
     def projects_with_ancestors(self, project_id):
